@@ -1,0 +1,50 @@
+body {
+  background-color: #00c6c6 !important;
+}
+
+h1{
+  text-align: center;
+  color:#00b2b2;
+  font-size: 3em !important;
+  padding:5px;
+  border-radius: 10px;
+}
+
+img{
+  width:100px;
+  height:100px;
+  float:right;
+  margin-right: 5px;
+}
+
+li{
+  margin:30px;
+  text-align: center;
+  font-size: 1.5em;
+}
+
+#centerWindow{
+  position:absolute;
+  top: 10%;
+  left:10%;
+  width: 80%;
+  height: 80%;
+  padding: 50px;
+  border-radius: 50px;
+  background-color: #FEFEFE;
+}
+#options-group{
+  margin-top: 10px;
+  padding:10px;
+  height:80%;
+}
+
+#vote-btn{
+  width:150px;
+  font-weight: bold;
+}
+
+#submission-group{
+  margin-top:10px;
+  top:auto;
+}
