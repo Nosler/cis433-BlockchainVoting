@@ -19,9 +19,6 @@ After installing python install pipenv by running:
 Then instal project dependencies with:
 ``pipenv install``
 
-Then project commands can be executed with:
-``pipenv run [command]``
-
 ## Usage
 How to have an election using this system, from A-Z:
 [Pending]
@@ -29,9 +26,9 @@ How to have an election using this system, from A-Z:
 ## Available commands:
 
 Commands that are available right now include:
-Start a server (with options to specify a port):
-``pipenv run python voteserver.py``
-``$ pipenv run python voteserver.py -p 5001``
-``$ pipenv run python voteserver.py --port 5002``
+Start a vote server (with options to specify a port):
+``pipenv run server``
+``pipenv run server -p 5001``
+``pipenv run server --port 5002``
 Run unit tests for the blockchain and cryptography functions:
 ``pipenv run python -m unittest``
