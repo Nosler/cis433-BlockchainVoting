@@ -33,7 +33,5 @@ Start a server (with options to specify a port):
 ``pipenv run python voteserver.py``
 ``$ pipenv run python voteserver.py -p 5001``
 ``$ pipenv run python voteserver.py --port 5002``
-Run a few temporary tests cryptography functions:
-``pipenv run python cryptfuncs.py``
-Run unit tests for the blockchain:
+Run unit tests for the blockchain and cryptography functions:
 ``pipenv run python -m unittest``
