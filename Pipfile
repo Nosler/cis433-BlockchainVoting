@@ -15,5 +15,5 @@ pycryptodome = "==3.7.3"
 rsa = "==4.0"
 
 [scripts]
-initialize = "python initialize_election.py"
+init = "python initialize_election.py"
 node = "python vote_manager_node.py"

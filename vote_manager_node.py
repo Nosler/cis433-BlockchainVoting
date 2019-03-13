@@ -6,6 +6,8 @@ from uuid import uuid4
 from flask import Flask, jsonify, request
 from argparse import ArgumentParser
 from blockchain import Blockchain
+import requests
+from time import sleep
 
 
 # Instantiate the blockchain node in flask:
@@ -113,10 +115,50 @@ def consensus():
     return jsonify(response), 200
 
 
+def initialize(source):
+    """
+    Link to a specified manager or miner node and import a blockchain from that node.
+    """
+    if source[-1] != '/':
+        source += '/'
+    blockchain.register_node(source)
+    for i in range(5):
+        try:
+            response = requests.get(source + "get_nodes")
+            if response.status_code:
+                break
+        except:
+            print("   Connection to {} source failed, retrying. Attempt {} of 5".format(
+                "default" if source == "http://127.0.0.1:4999/" else "specified", i + 1))
+            sleep(2)
+            i += 1
+            if i == 4:
+                print("\n  ***Connection failed. Please Register source and resolve chain manually.***")
+                return
+    if response.status_code == 200:
+        # Nodes only respond 200 if they are peer nodes. This stuff won't touch the initialization server,
+        # which simply shuts down after it passes on the blockchain.
+        # For node in response:
+        #      blockchain.register_node(node)
+        #      Ask responding node to register this one in return.
+        pass
+
+    initialize_from_source = blockchain.resolve_conflicts()
+    if initialize_from_source:
+        print("\n  ***Local blockchain has been initialized to match the specified source!***\n")
+    else:
+        print("\n  ***Failed to import blockchain from the specified source. "
+              "Try a different source or maybe just panic?***")
+
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=5000, type=int, help='port to listen on')
+    parser.add_argument('-src', '--source', default="http://127.0.0.1:4999/", type=str,
+                        help='port to listen on')
     args = parser.parse_args()
     port = args.port
+    source = args.source
+    initialize(source)
     # Initialize the app on the desired port:
     app.run(host='0.0.0.0', port=port)
