@@ -3,7 +3,7 @@
 # along with additional code by the authors to implement the specific needs of a blockchain enabled election. 
 
 from uuid import uuid4
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, render_template
 from argparse import ArgumentParser
 from blockchain import Blockchain
 import requests
@@ -19,6 +19,11 @@ node_identifier = str(uuid4()).replace('-', '')
 # Instantiate the blockchain for this node:
 blockchain = Blockchain()
 
+@app.route('/')
+@app.route('/index')
+@app.route('/index.html')
+def index():
+    return render_template('index.html')
 
 @app.route('/mine', methods=['GET'])
 def mine():
@@ -135,13 +140,14 @@ def initialize(source):
             if i == 4:
                 print("\n  ***Connection failed. Please Register source and resolve chain manually.***")
                 return
-    if response.status_code == 200:
-        # Nodes only respond 200 if they are peer nodes. This stuff won't touch the initialization server,
-        # which simply shuts down after it passes on the blockchain.
-        # For node in response:
-        #      blockchain.register_node(node)
-        #      Ask responding node to register this one in return.
-        pass
+    if response.status_code:
+        if response.status_code == 200:
+            # Nodes only respond 200 if they are peer nodes. This stuff won't touch the initialization server,
+            # which simply shuts down after it passes on the blockchain.
+            # For node in response:
+            #      blockchain.register_node(node)
+            #      Ask responding node to register this one in return.
+            pass
 
     initialize_from_source = blockchain.resolve_conflicts()
     if initialize_from_source:
