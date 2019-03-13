@@ -30,6 +30,14 @@ def import_key(filename):
     return RSA.importKey(f.read())
 
 
+def convert_string_to_key(key_string):
+    """
+    Convert a string of a key to a RSAKey object.
+    :param key_string: a string version of a key.
+    :return: An RsaKey object.
+    """
+    return RSA.importKey(str.encode(key_string))
+
 def get_public_key(priv_key):
     """
     Get the public key associated with a private key.
