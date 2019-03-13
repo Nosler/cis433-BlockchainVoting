@@ -16,7 +16,7 @@ class Blockchain:
         self.current_transactions = []
         self.chain = []
         self.nodes = set()
-        self.new_block(previous_hash='1', proof=100)
+        self.new_block(100, 1)
 
     def register_node(self, address):
         """
@@ -41,9 +41,9 @@ class Blockchain:
         last_block = chain[0]
         for current_index in range(1, len(chain)):
             block = chain[current_index]
-            print(f'{last_block}')
-            print(f'{block}')
-            print("\n-----------\n")
+            # print(f'{last_block}')
+            # print(f'{block}')
+            # print("\n-----------\n")
             # Check that the hash of the block is correct
             last_block_hash = self.hash(last_block)
             if block['previous_hash'] != last_block_hash:
@@ -66,6 +66,7 @@ class Blockchain:
         # Grab and verify the chains from all the nodes in the network
         for node in neighbours:
             response = requests.get(f'http://{node}/chain')
+            # Add something in here to remove neighbors who don't respond 200: prevent clutter.
             if response.status_code == 200:
                 length = response.json()['length']
                 chain = response.json()['chain']
@@ -87,7 +88,7 @@ class Blockchain:
         :return: A new block
         """
         block = {
-            'index': len(self.chain) + 1,
+            'index': len(self.chain),
             'timestamp': time(),
             'transactions': self.current_transactions,
             'proof': proof,

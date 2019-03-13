@@ -28,10 +28,19 @@ def send_chain_and_terminate():
         'chain': blockchain.chain,
         'length': len(blockchain.chain),
     }
+    print("\n  ***Block chain has been disseminated. Initialization server has completed its work. Shutting down.***\n")
     terminate_function = request.environ.get('werkzeug.server.shutdown')
     # The terminate function will be called as well as the miner returning the jsonified response.
     terminate_function()
     return jsonify(response), 200
+
+
+@app.route('/get_nodes', methods=['GET'])
+def no_other_nodes():
+    """
+    Since this miner node has no peers, send back nothing.
+    """
+    return jsonify(dict()), 204
 
 
 def mine_votes(votes_per_participant):
@@ -67,7 +76,7 @@ def mine_votes(votes_per_participant):
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('-p', '--port', default=5000, type=int, help='port to listen on')
+    parser.add_argument('-p', '--port', default=4999, type=int, help='port to listen on')
     parser.add_argument('-n', '--numvotes', default=10, type=int,
                         help='The number of votes generated for use in the election.')
     parser.add_argument('-vpp', '--votes_per_person', default=1, type=int,
