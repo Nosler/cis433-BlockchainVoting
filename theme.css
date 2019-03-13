@@ -48,3 +48,10 @@ li{
   margin-top:10px;
   top:auto;
 }
+
+#voting-id{
+    width: 15%;
+}
+#voting-key{
+    width: 50%;
+}
