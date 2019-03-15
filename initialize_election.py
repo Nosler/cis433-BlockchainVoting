@@ -85,6 +85,7 @@ if __name__ == '__main__':
     port = args.port
     num_votes = args.numvotes
     votes_per_person = args.votes_per_person
+    print()
     for i in range(num_votes):
         print("   Generating unique key pair for voter number: {}".format(i + 1))
         mine_votes(votes_per_person)

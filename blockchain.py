@@ -16,7 +16,8 @@ class Blockchain:
         self.current_transactions = []
         self.chain = []
         self.nodes = set()
-        self.new_block(100, 1)
+        self.new_block(proof=100, previous_hash=1)
+        self.lock = False
 
     def register_node(self, address):
         """
@@ -31,6 +32,27 @@ class Blockchain:
             self.nodes.add(parsed_url.path)
         else:
             raise ValueError('Invalid URL')
+
+    def remove_node(self, address):
+        """
+        Remove a node from the list of connected nodes.
+        Might be useful for pruning deactivated servers from the list.
+        :param address: Address to be removed.
+        """
+        parsed_url = urlparse(address)
+        if parsed_url.netloc:
+            self.nodes.discard(parsed_url.netloc)
+        elif parsed_url.path:
+            self.nodes.discard(parsed_url.path)
+        else:
+            self.nodes.discard(address)
+
+    def value_lock(self):
+        """
+        Toggles the chain as locked, preventing this node from excepting any chain that has a higher total
+        value than what this node already has.
+        """
+        self.lock = True
 
     def valid_chain(self, chain):
         """
@@ -59,21 +81,31 @@ class Blockchain:
         Resolves conflicts by replacing our chain with the longest one in the network.
         :return: True if chain was replaced, False if not.
         """
-        neighbours = self.nodes
+        neighbours = list(self.nodes)
         new_chain = None
         # Only looking for longer chains:
         max_length = len(self.chain)
         # Grab and verify the chains from all the nodes in the network
         for node in neighbours:
-            response = requests.get(f'http://{node}/chain')
-            # Add something in here to remove neighbors who don't respond 200: prevent clutter.
-            if response.status_code == 200:
-                length = response.json()['length']
-                chain = response.json()['chain']
-                # Check if the length is longer and the chain is valid
-                if length > max_length and self.valid_chain(chain):
-                    max_length = length
-                    new_chain = chain
+            response = None
+            for i in range(5):
+                try:
+                    response = requests.get(f'http://{node}/chain')
+                    if response:
+                        break
+                except:
+                    if i == 4:
+                        # Remove unresponsive nodes.
+                        self.nodes.discard(node)
+                    continue
+            if response:
+                if response.status_code == 200:
+                    length = response.json()['length']
+                    chain = response.json()['chain']
+                    # Check if the length is longer and the chain is valid
+                    if length > max_length and self.valid_chain(chain):
+                        max_length = length
+                        new_chain = chain
         # Replace this node's chain if a new, valid, longer chain is discovered:
         if new_chain:
             self.chain = new_chain
@@ -92,7 +124,7 @@ class Blockchain:
             'timestamp': time(),
             'transactions': self.current_transactions,
             'proof': proof,
-            'previous_hash': previous_hash or self.hash(self.chain[-1]),
+            'previous_hash': previous_hash or self.hash(self.chain[-1])
         }
         # Reset the current list of transactions
         self.current_transactions = []
@@ -110,8 +142,10 @@ class Blockchain:
         self.current_transactions.append({
             'sender': sender,
             'recipient': recipient,
-            'amount': amount,
+            'timestamp': time(),
+            'amount': amount
         })
+        # Return the index of the next block (which this transaction will be appended to) for output purposes.
         return self.last_block['index'] + 1
 
     @property
@@ -133,6 +167,10 @@ class Blockchain:
         Simple proof of work algorithm:
          - Find a number p' such that hash(pp') contains leading 4 zeroes
          - Where p is the previous proof, and p' is the new proof
+        For a blockchain used to store votes in an election, we don't care
+        very much about proof of work at all. Indeed, it might be optimal to
+        completely remove proof of work for non-currency blockchain applications.
+        However, this function is kept here for now.
         :param last_block: <dict> last block
         :return: <int> proof of work.
         """

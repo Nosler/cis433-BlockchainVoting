@@ -8,6 +8,7 @@ from argparse import ArgumentParser
 from blockchain import Blockchain
 import requests
 from time import sleep
+from werkzeug.contrib.fixers import ProxyFix
 
 
 # Instantiate the blockchain node in flask:
@@ -19,11 +20,13 @@ node_identifier = str(uuid4()).replace('-', '')
 # Instantiate the blockchain for this node:
 blockchain = Blockchain()
 
+
 @app.route('/')
 @app.route('/index')
 @app.route('/index.html')
 def index():
     return render_template('index.html')
+
 
 @app.route('/mine', methods=['GET'])
 def mine():
@@ -83,24 +86,6 @@ def full_chain():
     return jsonify(response), 200
 
 
-@app.route('/nodes/register', methods=['POST'])
-def register_nodes():
-    """
-    Register a list of new nodes that share the blockchain.
-    """
-    values = request.get_json(force=True)
-    nodes = values.get('nodes')
-    if nodes is None:
-        return "Error: Please supply a valid list of nodes", 400
-    for node in nodes:
-        blockchain.register_node(node)
-    response = {
-        'message': 'New nodes have been added',
-        'total_nodes': list(blockchain.nodes),
-    }
-    return jsonify(response), 201
-
-
 @app.route('/nodes/resolve', methods=['GET'])
 def consensus():
     """
@@ -120,12 +105,36 @@ def consensus():
     return jsonify(response), 200
 
 
-def initialize(source):
+@app.route('/get_nodes', methods=['GET'])
+def send_node_list():
+    """
+    App route to call to return a list of all nodes this node is connected to.
+    """
+    response = {'nodes': list(blockchain.nodes)}
+    return jsonify(response), 200
+
+
+@app.route('/recip', methods=['post'])
+def reciprocate_acknowledgement():
+    """
+    App route to call to return a list of all nodes this node is connected to.
+    """
+    values = request.get_json(force=True)
+    blockchain.register_node(request.remote_addr + ":" + str(values['port']))
+    response = {
+        'message': 'New node added',
+        'nodes': list(blockchain.nodes),
+    }
+    return jsonify(response), 200
+
+
+def initialize(source, port):
     """
     Link to a specified manager or miner node and import a blockchain from that node.
     """
     if source[-1] != '/':
         source += '/'
+    print("\n   Querying source: {}".format(source + "get_nodes"))
     blockchain.register_node(source)
     for i in range(5):
         try:
@@ -138,23 +147,48 @@ def initialize(source):
             sleep(2)
             i += 1
             if i == 4:
-                print("\n  ***Connection failed. Please Register source and resolve chain manually.***")
-                return
-    if response.status_code:
-        if response.status_code == 200:
-            # Nodes only respond 200 if they are peer nodes. This stuff won't touch the initialization server,
-            # which simply shuts down after it passes on the blockchain.
-            # For node in response:
-            #      blockchain.register_node(node)
-            #      Ask responding node to register this one in return.
-            pass
+                print("\n  ***Connection failed. Maybe that server isn't alive right now? Please try again. ***")
+                quit()
+
+    # Nodes only respond 200 if they are peer nodes, not an initiation node,
+    # which simply shuts down after it passes on the blockchain.
+    if response.status_code == 200:
+        # List of nodes connected to our target source.
+        connected_nodes = response.json()['nodes']
+        # Ask for recip with target source:
+        response = requests.post(source + "recip", json={'port': port})
+        if len(connected_nodes):
+            print("   Registering nodes connected to target node and requesting reciprocation.")
+            for node in connected_nodes:
+                response = None
+                try:
+                    response = requests.post("http://" + node + "/recip", json={'port': port})
+                    if response:
+                        blockchain.register_node(node)
+                except:
+                    continue
+        print("   Connected established with the following nodes:")
+        for node in blockchain.nodes:
+            print("      {}".format(node))
 
     initialize_from_source = blockchain.resolve_conflicts()
+    # A key feature of using blockchains in an election is that votes cannot be 'mined' after the
+    # initial blockchain is set up, though transactions can still be added to blocks with zero value.
+
+    blockchain.value_lock()
     if initialize_from_source:
         print("\n  ***Local blockchain has been initialized to match the specified source!***\n")
     else:
         print("\n  ***Failed to import blockchain from the specified source. "
               "Try a different source or maybe just panic?***")
+        quit()
+
+    if response.status_code == 204:
+        # If the target node was an initialization type node, it is terminated after it passes on a chain.
+        blockchain.remove_node(source[:-1])  # The [:-1] removes the slash from the end of the source address.
+
+
+app.wsgi_app = ProxyFix(app.wsgi_app)
 
 
 if __name__ == '__main__':
@@ -165,6 +199,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     port = args.port
     source = args.source
-    initialize(source)
+    initialize(source, port)
     # Initialize the app on the desired port:
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, threaded=True)
