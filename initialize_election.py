@@ -35,7 +35,7 @@ def send_chain_and_terminate():
     return jsonify(response), 200
 
 
-@app.route('/get_nodes', methods=['GET'])
+@app.route('/nodes', methods=['GET'])
 def no_other_nodes():
     """
     Since this miner node has no peers, send back nothing.

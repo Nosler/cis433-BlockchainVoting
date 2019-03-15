@@ -86,12 +86,24 @@ def full_chain():
     return jsonify(response), 200
 
 
-@app.route('/nodes/resolve', methods=['GET'])
+@app.route('/resolve', methods=['GET'])
 def consensus():
     """
     Call function to resolve conflicts between this node and other nodes.
     """
     replaced = blockchain.resolve_conflicts()
+
+    # If, at some point in the past, there was a parallel operation that resulted in the node failing to respond
+    # to another node's request, this node may have been incorrectly pruned from that node's list of active nodes.
+    # To correct this, send a reciprocation request to all nodes that just responded by sending this node a chain.
+    # This might add a tiny bit to server overhead, and it solves a palatalization problem that problem won't happen,
+    # But it makes the system a tiny bit more robust:
+    for node in blockchain.nodes:
+        try:
+            requests.post("http://" + node + "/recip", json={'port': port})
+        except:
+            continue
+
     if replaced:
         response = {
             'message': 'Our chain was replaced',
@@ -105,7 +117,7 @@ def consensus():
     return jsonify(response), 200
 
 
-@app.route('/get_nodes', methods=['GET'])
+@app.route('/nodes', methods=['GET'])
 def send_node_list():
     """
     App route to call to return a list of all nodes this node is connected to.
@@ -134,11 +146,11 @@ def initialize(source, port):
     """
     if source[-1] != '/':
         source += '/'
-    print("\n   Querying source: {}".format(source + "get_nodes"))
+    print("\n   Querying source: {}".format(source + "nodes"))
     blockchain.register_node(source)
     for i in range(5):
         try:
-            response = requests.get(source + "get_nodes")
+            response = requests.get(source + "nodes")
             if response.status_code:
                 break
         except:
