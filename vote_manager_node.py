@@ -9,6 +9,7 @@ from blockchain import Blockchain
 import requests
 from time import sleep
 from werkzeug.contrib.fixers import ProxyFix
+import atexit
 
 
 # Instantiate the blockchain node in flask:
@@ -69,8 +70,8 @@ def new_transaction():
         return 'Missing values', 400
 
     # Create a new transaction on the blockchain:
-    index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
-    response = {'message': f'Transaction will be added to Block {index}'}
+    idx = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
+    response = {'message': f'Transaction will be added to Block {idx}'}
     return jsonify(response), 201
 
 
@@ -135,12 +136,26 @@ def reciprocate_acknowledgement():
     blockchain.register_node(request.remote_addr + ":" + str(values['port']))
     response = {
         'message': 'New node added',
-        'nodes': list(blockchain.nodes),
+        'nodes': list(blockchain.nodes)
     }
     return jsonify(response), 200
 
 
-def initialize(source, port):
+@app.route('/remove', methods=['post'])
+def remove_node():
+    """
+    App route to call to remove a node that is terminating itself.
+    """
+    values = request.get_json(force=True)
+    blockchain.remove_node(request.remote_addr + ":" + str(values['port']))
+    response = {
+        'message': 'Node removed',
+        'nodes': list(blockchain.nodes)
+    }
+    return jsonify(response), 200
+
+
+def initialize(source):
     """
     Link to a specified manager or miner node and import a blockchain from that node.
     """
@@ -148,6 +163,7 @@ def initialize(source, port):
         source += '/'
     print("\n   Querying source: {}".format(source + "nodes"))
     blockchain.register_node(source)
+    response = None
     for i in range(5):
         try:
             response = requests.get(source + "nodes")
@@ -200,10 +216,32 @@ def initialize(source, port):
         blockchain.remove_node(source[:-1])  # The [:-1] removes the slash from the end of the source address.
 
 
+def exit_func():
+    print("\n   Shutting down server...")
+    for node in blockchain.nodes:
+        # Have one of the other nodes resolve the chain, so that if this node has the longest chain,
+        # the chain is sent off to a node that is not exiting.
+        try:
+            response = requests.get("http://" + node + "/resolve")
+            if response:
+                break
+        except:
+            continue
+    # Tell other nodes to remove this node from their lists of nodes. Not strictly necessary, just less time wasted
+    # pinging this address later.
+    for node in blockchain.nodes:
+        try:
+            requests.post("http://" + node + "/remove", json={'port': port})
+        except:
+            continue
+    print("   Have a nice day.")
+
+
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
 
 if __name__ == '__main__':
+    atexit.register(exit_func)
     parser = ArgumentParser()
     parser.add_argument('-p', '--port', default=5000, type=int, help='port to listen on')
     parser.add_argument('-src', '--source', default="http://127.0.0.1:4999/", type=str,
@@ -211,6 +249,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     port = args.port
     source = args.source
-    initialize(source, port)
+    initialize(source)
     # Initialize the app on the desired port:
     app.run(host='0.0.0.0', port=port, threaded=True)
