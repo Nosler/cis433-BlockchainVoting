@@ -49,8 +49,9 @@ https://github.com/Nosler/cis433-BlockchainVoting/blob/master/secret_keys/secret
 
 * 4: 
 
-* TLDR: Run ``pipenv install`` then ``pipenv run init -n 30`` and simultaneously ``pipenv run node`` then send all
-thirty people who get to vote a secret key from the ``/secret_keys`` folder and have them all visit:
+* TLDR: Run ``pipenv install`` then specify the number of votes like ``pipenv run init -n 30``
+and simultaneously ``pipenv run node`` then send all the people who get to vote a secret key 
+from the ``/secret_keys`` folder and have them all visit:
 ``http://your.ip.address.or.wherever.you.hosted.this:5000`` to vote.
 
 ## List of commands:
