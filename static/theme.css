@@ -23,6 +23,13 @@ li{
   font-size: 1.5em;
 }
 
+.badge{
+    float:right;
+    vertical-align: middle !important;
+    padding: 10px !important;
+    width: 10%;
+}
+
 #centerWindow{
   position:absolute;
   top: 10%;
