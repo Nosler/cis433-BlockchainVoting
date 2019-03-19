@@ -41,8 +41,8 @@ function op5(){
 }
 
 function submitVote(){
-  var codebox = document.getElementById("code-box");
-  var code = codebox.value;
+  var id = document.getElementById("voting-id").value;
+  var code = document.getElementById("vote-key-file").value;
   if(code != "fail"){
     console.log("Vote submitted with code:  " + code);
     window.location.href = 'https://www.youtube.com/watch?v=FTQbiNvZqaY';
