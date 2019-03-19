@@ -12,6 +12,20 @@ window.onload=function(){
   }
 }
 
+function getFileInfo(){
+    // Code taken from https://stackoverflow.com/questions/857618/javascript-how-to-extract-filename-from-a-file-input-control
+    var fullPath = document.getElementById("vote-key-file").value;
+    if (fullPath) {
+        var startIndex = (fullPath.indexOf('\\') >= 0 ? fullPath.lastIndexOf('\\') : fullPath.lastIndexOf('/'));
+        var filename = fullPath.substring(startIndex);
+        if (filename.indexOf('\\') === 0 || filename.indexOf('/') === 0) {
+            filename = filename.substring(1);
+        }
+        var textlabel = document.getElementById("file-label");
+        textlabel.textContent = filename;
+    }
+}
+
 function clearCandidate(){
   console.log("Candidates Cleared");
   var active_element = document.getElementsByClassName("active")[0];
