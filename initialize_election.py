@@ -77,7 +77,7 @@ def mine_votes(votes_per_participant):
 
 
     final_path = path.join(script_path, relative_path)
-    with open(final_path, 'wb+') as f:
+    with open(final_path, 'wb') as f:
         f.write(signature)
 
 
