@@ -10,6 +10,7 @@ from flask import Flask, jsonify, request
 from argparse import ArgumentParser
 from blockchain import Blockchain
 from cryptfuncs import *
+from sys import platform
 
 # Instantiate the app in flask:
 app = Flask(__name__)
@@ -68,9 +69,15 @@ def mine_votes(votes_per_participant):
     signature = sign(verification_message, private)
 
     script_path = path.dirname(path.abspath(__file__))
-    relative_path = "secret_keys\\key_{}.vote".format(i+1)
+
+    if platform == "win32":
+        relative_path = "secret_keys\\key_{}.vote".format(i+1)
+    else:
+        relative_path = "secret_keys/key_{}.vote".format(i+1)
+
+
     final_path = path.join(script_path, relative_path)
-    with open(final_path, 'wb') as f:
+    with open(final_path, 'wb+') as f:
         f.write(signature)
 
 
