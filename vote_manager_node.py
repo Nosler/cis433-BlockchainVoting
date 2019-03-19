@@ -9,6 +9,7 @@ from blockchain import Blockchain
 import requests
 from time import sleep
 from werkzeug.contrib.fixers import ProxyFix
+from urllib.parse import urlparse
 import atexit
 
 
@@ -161,17 +162,28 @@ def initialize(source):
     """
     if source[-1] != '/':
         source += '/'
-    print("\n   Querying source: {}".format(source + "nodes/"))
-    blockchain.register_node(source)
+    input_source = source[:]
+
+    parsed_url = urlparse(source)
+    if parsed_url.netloc:
+        source = parsed_url.netloc
+    elif parsed_url.path:
+        # Accepts a URL like '192.168.0.5:5000'.
+        source = parsed_url.path
+    else:
+        raise ValueError('Invalid source URL. Maybe it was a typo?')
+
+    blockchain.register_node(input_source)
+    print("\n   Querying source: {}".format("http://" + source + "/nodes/"))
     response = None
     for i in range(5):
         try:
-            response = requests.get(source + "nodes/")
+            response = requests.get("http://" + source + "/nodes/")
             if response.status_code:
                 break
         except:
             print("   Connection to {} source failed, retrying. Attempt {} of 5".format(
-                "default" if source == "http://127.0.0.1:4999/" else "specified", i + 1))
+                "default" if input_source == "http://127.0.0.1:4999/" else "specified", i + 1))
             sleep(2)
             i += 1
             if i == 4:
@@ -184,7 +196,7 @@ def initialize(source):
         # List of nodes connected to our target source.
         connected_nodes = response.json()['nodes']
         # Ask for recip with target source:
-        response = requests.post(source + "recip", json={'port': port})
+        response = requests.post("http://" + source + "/recip", json={'port': port})
         if len(connected_nodes):
             print("   Registering nodes connected to target node and requesting reciprocation.")
             for node in connected_nodes:
@@ -213,11 +225,11 @@ def initialize(source):
 
     if response.status_code == 204:
         # If the target node was an initialization type node, it is terminated after it passes on a chain.
-        blockchain.remove_node(source[:-1])  # The [:-1] removes the slash from the end of the source address.
+        blockchain.remove_node(parsed_url[:-1])  # The [:-1] removes the slash from the end of the source address.
 
 
 def exit_func():
-    print("\n   Shutting down server...")
+    print("\n   Shutting down node...")
     for node in blockchain.nodes:
         # Have one of the other nodes resolve the chain, so that if this node has the longest chain,
         # the chain is sent off to a node that is not exiting.
