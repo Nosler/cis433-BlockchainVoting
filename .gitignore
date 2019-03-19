@@ -338,4 +338,6 @@ ASALocalRun/
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
 
+# ngrok is a great utility for allowing http connections to local host.
 ngrok
+ngrok.exe

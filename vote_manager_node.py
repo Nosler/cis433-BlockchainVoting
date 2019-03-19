@@ -225,7 +225,7 @@ def initialize(source):
 
     if response.status_code == 204:
         # If the target node was an initialization type node, it is terminated after it passes on a chain.
-        blockchain.remove_node(parsed_url[:-1])  # The [:-1] removes the slash from the end of the source address.
+        blockchain.remove_node(input_source[:-1])  # The [:-1] removes the slash from the end of the source address.
 
 
 def exit_func():
