@@ -18,7 +18,7 @@ app = Flask(__name__)
 blockchain = Blockchain()
 
 
-@app.route('/chain', methods=['GET'])
+@app.route('/chain/', methods=['GET'])
 def send_chain_and_terminate():
     """
     App route to call to send the chain to another node and then terminate this miner.
@@ -35,7 +35,7 @@ def send_chain_and_terminate():
     return jsonify(response), 200
 
 
-@app.route('/nodes', methods=['GET'])
+@app.route('/nodes/', methods=['GET'])
 def no_other_nodes():
     """
     Since this miner node has no peers, send back nothing.

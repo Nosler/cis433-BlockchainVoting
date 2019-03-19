@@ -29,7 +29,7 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/mine', methods=['GET'])
+@app.route('/mine/', methods=['GET'])
 def mine():
     """
     The app route to add a new coin/vote to the block.
@@ -58,7 +58,7 @@ def mine():
     return jsonify(response), 200
 
 
-@app.route('/transactions/new', methods=['POST'])
+@app.route('/transactions/new/', methods=['POST'])
 def new_transaction():
     """
     Appp route for conducting a transfer of a coin (e.g. for voting for a recipient).
@@ -75,7 +75,7 @@ def new_transaction():
     return jsonify(response), 201
 
 
-@app.route('/chain', methods=['GET'])
+@app.route('/chain/', methods=['GET'])
 def full_chain():
     """
     App route to call for a display of the entire chain.
@@ -87,7 +87,7 @@ def full_chain():
     return jsonify(response), 200
 
 
-@app.route('/resolve', methods=['GET'])
+@app.route('/resolve/', methods=['GET'])
 def consensus():
     """
     Call function to resolve conflicts between this node and other nodes.
@@ -118,7 +118,7 @@ def consensus():
     return jsonify(response), 200
 
 
-@app.route('/nodes', methods=['GET'])
+@app.route('/nodes/', methods=['GET'])
 def send_node_list():
     """
     App route to call to return a list of all nodes this node is connected to.
@@ -127,7 +127,7 @@ def send_node_list():
     return jsonify(response), 200
 
 
-@app.route('/recip', methods=['post'])
+@app.route('/recip/', methods=['post'])
 def reciprocate_acknowledgement():
     """
     App route to call to return a list of all nodes this node is connected to.
@@ -141,7 +141,7 @@ def reciprocate_acknowledgement():
     return jsonify(response), 200
 
 
-@app.route('/remove', methods=['post'])
+@app.route('/remove/', methods=['post'])
 def remove_node():
     """
     App route to call to remove a node that is terminating itself.
@@ -161,12 +161,12 @@ def initialize(source):
     """
     if source[-1] != '/':
         source += '/'
-    print("\n   Querying source: {}".format(source + "nodes"))
+    print("\n   Querying source: {}".format(source + "nodes/"))
     blockchain.register_node(source)
     response = None
     for i in range(5):
         try:
-            response = requests.get(source + "nodes")
+            response = requests.get(source + "nodes/")
             if response.status_code:
                 break
         except:
@@ -190,7 +190,7 @@ def initialize(source):
             for node in connected_nodes:
                 response = None
                 try:
-                    response = requests.post("http://" + node + "/recip", json={'port': port})
+                    response = requests.post("http://" + node + "/recip/", json={'port': port})
                     if response:
                         blockchain.register_node(node)
                 except:
@@ -222,7 +222,7 @@ def exit_func():
         # Have one of the other nodes resolve the chain, so that if this node has the longest chain,
         # the chain is sent off to a node that is not exiting.
         try:
-            response = requests.get("http://" + node + "/resolve")
+            response = requests.get("http://" + node + "/resolve/")
             if response:
                 break
         except:
@@ -231,7 +231,7 @@ def exit_func():
     # pinging this address later.
     for node in blockchain.nodes:
         try:
-            requests.post("http://" + node + "/remove", json={'port': port})
+            requests.post("http://" + node + "/remove/", json={'port': port})
         except:
             continue
     print("   Have a nice day.")
