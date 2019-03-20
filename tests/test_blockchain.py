@@ -15,7 +15,7 @@ class BlockchainTestCase(TestCase):
     def create_block(self, proof=123, previous_hash='abc'):
         self.blockchain.new_block(proof, previous_hash)
 
-    def create_transaction(self, sender='a', recipient='b', amount=1):
+    def create_transaction(self, sender='0', recipient='b', amount=1):
         self.blockchain.new_transaction(
             sender=sender,
             recipient=recipient,
@@ -45,9 +45,8 @@ class TestBlocksAndTransactions(BlockchainTestCase):
     def test_block_creation(self):
         self.create_block()
         latest_block = self.blockchain.last_block
-        # The genesis block is created at initialization, so the length should be 2
         assert len(self.blockchain.chain) == 2
-        assert latest_block['index'] == 2
+        assert latest_block['index'] == 1
         assert latest_block['timestamp'] is not None
         assert latest_block['proof'] == 123
         assert latest_block['previous_hash'] == 'abc'
@@ -56,7 +55,7 @@ class TestBlocksAndTransactions(BlockchainTestCase):
         self.create_transaction()
         transaction = self.blockchain.current_transactions[-1]
         assert transaction
-        assert transaction['sender'] == 'a'
+        assert transaction['sender'] == '0'
         assert transaction['recipient'] == 'b'
         assert transaction['amount'] == 1
 

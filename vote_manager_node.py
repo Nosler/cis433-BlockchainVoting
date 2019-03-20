@@ -23,6 +23,12 @@ node_identifier = str(uuid4()).replace('-', '')
 blockchain = Blockchain()
 
 
+@app.route('/test/', methods=['GET'])
+def test():
+    print(blockchain.chain_to_wallets(list()))
+    return render_template('index.html')
+
+
 @app.route('/')
 @app.route('/index')
 @app.route('/index.html')
@@ -127,9 +133,11 @@ def send_node_list():
     response = {'nodes': list(blockchain.nodes)}
     return jsonify(response), 200
 
+
 @app.route('/results/', methods=['GET'])
 def send_results():
     return render_template('results.html')
+
 
 @app.route('/vote', methods=['post'])
 @app.route('/vote/', methods=['post'])
@@ -139,6 +147,7 @@ def submit_vote():
     print("Candidate: " + request.form["candidate"])
     #Needs to return a string, "success" or "fail"
     return jsonify({"status": "success"})
+
 
 @app.route('/recip/', methods=['post'])
 def reciprocate_acknowledgement():
