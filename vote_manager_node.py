@@ -1,6 +1,6 @@
 # Authors: Sam Champer, Andi Nosler
 # Partially uses some code from Daniel van Flymen (https://github.com/dvf/blockchain)
-# along with additional code by the authors to implement the specific needs of a blockchain enabled election. 
+# along with additional code by the authors to implement the specific needs of a blockchain enabled election.
 
 from uuid import uuid4
 from flask import Flask, jsonify, request, render_template
@@ -127,6 +127,18 @@ def send_node_list():
     response = {'nodes': list(blockchain.nodes)}
     return jsonify(response), 200
 
+@app.route('/results/', methods=['GET'])
+def send_results():
+    return render_template('results.html')
+
+@app.route('/vote', methods=['post'])
+@app.route('/vote/', methods=['post'])
+def submit_vote():
+    print("ID: " + request.form["id"])
+    print("Key: " + request.form["key"])
+    print("Candidate: " + request.form["candidate"])
+    #Needs to return a string, "success" or "fail"
+    return jsonify({"status": "success"})
 
 @app.route('/recip/', methods=['post'])
 def reciprocate_acknowledgement():

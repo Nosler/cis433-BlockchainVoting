@@ -1,3 +1,11 @@
+var candidateNames = [
+    "A feeling",
+    "More than a feeling",
+    "A color",
+    "Y'know, just, life",
+    "Eiffel 65",
+]
+
 window.onload=function(){
   document.getElementById("Op1").addEventListener("click", op1);
   document.getElementById("Op2").addEventListener("click", op2);
@@ -56,11 +64,35 @@ function op5(){
 
 function submitVote(){
   var id = document.getElementById("voting-id").value;
-  var code = document.getElementById("vote-key-file").value;
-  if(code != "fail"){
-    console.log("Vote submitted with code:  " + code);
-    window.location.href = 'https://www.youtube.com/watch?v=FTQbiNvZqaY';
-  }else{
-    alert("Invalid code!");
+  var key = document.getElementById("vote-key-file").value;
+  var candidate_list = document.getElementsByClassName("candidate");
+  var i;
+  var voteID = 0;
+  for(i = 0; i < 5; i++){
+      if(candidate_list[i].classList.contains("active")){
+          voteID = i;
+      }
   }
+  console.log("ID: ", id);
+  console.log("Key: ", key);
+  console.log("Candidate: ", candidateNames[voteID]);
+  var VOTE_URL = window.location.href + "vote";
+
+  var r = new FileReader();
+  r.readAsText(document.getElementById("vote-key-file").files[0], "UTF-8");
+  r.onload = function(){
+      $.post("vote/", {id: id, key: r.result, candidate: candidateNames[voteID]},
+       function(data, status){
+           redirect(data);
+       }, "json");
+  };
+}
+
+function redirect(data){
+    console.log("SERVER RETURNED: ", data);
+    if(data.status == "success"){
+        window.location.assign(window.location.href + "results/");
+    } else {
+        alert("Vote invalid!");
+    }
 }
