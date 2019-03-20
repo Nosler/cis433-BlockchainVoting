@@ -23,63 +23,11 @@ node_identifier = str(uuid4()).replace('-', '')
 blockchain = Blockchain()
 
 
-@app.route('/test/', methods=['GET'])
-def test():
-    print(blockchain.chain_to_wallets(list()))
-    return render_template('index.html')
-
-
 @app.route('/')
 @app.route('/index')
 @app.route('/index.html')
 def index():
     return render_template('index.html')
-
-
-@app.route('/mine/', methods=['GET'])
-def mine():
-    """
-    The app route to add a new coin/vote to the block.
-    """
-    # Run the proof of work algorithm to get the next proof:
-    last_block = blockchain.last_block
-    proof = blockchain.proof_of_work(last_block)
-
-    # Receive a reward for finding the proof:
-    # The sender is "0" to signify that this is a newly mined coin, not a transfer.
-    blockchain.new_transaction(
-        sender="0",
-        recipient=node_identifier,
-        amount=1,
-    )
-    # Forge the new block by adding it to the chain:
-    previous_hash = blockchain.hash(last_block)
-    block = blockchain.new_block(proof, previous_hash)
-    response = {
-        'message': "New Block Forged",
-        'index': block['index'],
-        'transactions': block['transactions'],
-        'proof': block['proof'],
-        'previous_hash': block['previous_hash'],
-    }
-    return jsonify(response), 200
-
-
-@app.route('/transactions/new/', methods=['POST'])
-def new_transaction():
-    """
-    Appp route for conducting a transfer of a coin (e.g. for voting for a recipient).
-    """
-    values = request.get_json(force=True)
-    # Check that the required fields are in the POST:
-    required = ['sender', 'recipient', 'amount']
-    if not all(k in values for k in required):
-        return 'Missing values', 400
-
-    # Create a new transaction on the blockchain:
-    idx = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
-    response = {'message': f'Transaction will be added to Block {idx}'}
-    return jsonify(response), 201
 
 
 @app.route('/chain/', methods=['GET'])
@@ -104,8 +52,8 @@ def consensus():
     # If, at some point in the past, there was a parallel operation that resulted in the node failing to respond
     # to another node's request, this node may have been incorrectly pruned from that node's list of active nodes.
     # To correct this, send a reciprocation request to all nodes that just responded by sending this node a chain.
-    # This might add a tiny bit to server overhead, and it solves a palatalization problem that problem won't happen,
-    # But it makes the system a tiny bit more robust:
+    # This might add a tiny bit to server overhead, and it solves a parallelization problem that probably won't happen,
+    # but it makes the system a tiny bit more robust:
     for node in blockchain.nodes:
         try:
             requests.post("http://" + node + "/recip", json={'port': port})
@@ -136,16 +84,56 @@ def send_node_list():
 
 @app.route('/results/', methods=['GET'])
 def send_results():
+    # TODO: THIS PAGE CAUSES RESOLVE.
+    # TODO: GET THE BALANCE OF EACH CANDIDATE FROM THE CURRENT CHAIN.
     return render_template('results.html')
 
 
 @app.route('/vote', methods=['post'])
 @app.route('/vote/', methods=['post'])
 def submit_vote():
-    print("ID: " + request.form["id"])
-    print("Key: " + request.form["key"])
-    print("Candidate: " + request.form["candidate"])
-    #Needs to return a string, "success" or "fail"
+    vote_number = int(request.form["id"])
+    signature = request.form["key"]
+    recipient = request.form["candidate"]
+    print("ID: ", vote_number, type(vote_number))
+    print("Key: " + signature)
+    print("Candidate: " + recipient)
+    sender = blockchain.get_transactor(vote_number)
+    if not sender:
+        return jsonify({"status": "fail"})
+
+    vote = blockchain.new_transaction(
+        sender=sender,
+        recipient=recipient,
+        amount=1,
+        signature=signature,
+        vote_number=vote_number
+    )
+    if not blockchain.valid_transaction(vote, blockchain.chain):
+        return jsonify({"status": "fail"})
+    if not blockchain.valid_balance(vote):
+        return jsonify({"status": "fail"})
+    # Do the above checks in order to display to html if the vote is valid.
+    # Note: the blockchain will do these checks independently, so even if a malicous
+    # party were to remove these checks from their code and then start a node and connect
+    # to the other nodes, an illegitamate transaction still won't be accepted, since
+    # each legitimate node will perform these checks on the transaction before
+    # accepting a chain with this transaction in it.
+
+    # Transaction appears valid. Add it and any pending transactions to a new block:
+    # Run the proof of work algorithm to get the next proof:
+    last_block = blockchain.last_block
+    proof = blockchain.proof_of_work(last_block)
+    previous_hash = blockchain.hash(last_block)
+    block = blockchain.new_block(proof, previous_hash)
+    # Return fail if transaction somehow was not properly placed in the block.
+    if not block['transactions']:
+        return jsonify({"status": "fail"})
+    if vote not in block['transactions']:
+        return jsonify({"status": "fail"})
+    # Transaction successfully added to new block. Broadcast the new transaction to other nodes.
+    # TODO: BROADCAST TO OTHER NODES. IMPLEMENT BROADCAST_VOTE FUNC. IMPLEMENT RCV VOTE APP ROUTE FUNC.///////////////////////////////
+    # HTML will now redirect to page for checking vote.
     return jsonify({"status": "success"})
 
 
@@ -177,29 +165,29 @@ def remove_node():
     return jsonify(response), 200
 
 
-def initialize(source):
+def initialize(chain_source):
     """
     Link to a specified manager or miner node and import a blockchain from that node.
     """
-    if source[-1] != '/':
-        source += '/'
-    input_source = source[:]
+    if chain_source[-1] != '/':
+        chain_source += '/'
+    input_source = chain_source[:]
 
-    parsed_url = urlparse(source)
+    parsed_url = urlparse(chain_source)
     if parsed_url.netloc:
-        source = parsed_url.netloc
+        chain_source = parsed_url.netloc
     elif parsed_url.path:
         # Accepts a URL like '192.168.0.5:5000'.
-        source = parsed_url.path
+        chain_source = parsed_url.path
     else:
         raise ValueError('Invalid source URL. Maybe it was a typo?')
 
     blockchain.register_node(input_source)
-    print("\n   Querying source: {}".format("http://" + source + "/nodes/"))
+    print("\n   Querying source: {}".format("http://" + chain_source + "/nodes/"))
     response = None
     for i in range(5):
         try:
-            response = requests.get("http://" + source + "/nodes/")
+            response = requests.get("http://" + chain_source + "/nodes/")
             if response.status_code:
                 break
         except:
@@ -217,7 +205,7 @@ def initialize(source):
         # List of nodes connected to our target source.
         connected_nodes = response.json()['nodes']
         # Ask for recip with target source:
-        response = requests.post("http://" + source + "/recip", json={'port': port})
+        response = requests.post("http://" + chain_source + "/recip", json={'port': port})
         if len(connected_nodes):
             print("   Registering nodes connected to target node and requesting reciprocation.")
             for node in connected_nodes:

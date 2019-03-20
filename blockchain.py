@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 import requests
 import cryptfuncs
 
+
 def log(*args, **kwargs):
     logging = True
     if logging:
@@ -242,25 +243,36 @@ class Blockchain:
             log("ORIGINAL MINER TRANSACTIONS ARE CHECKED LATER.")
             return True
 
-        log("CHECKING TRANSFER TRANSACTION.")
+        log("CHECKING THAT TRANSFER IS VALID.")
         # If not an original vote producer vote, then the vote is being
         # transferred, e.g. being cast.
         # Ensure that the vote number is the correct one for this vote:
         vote_number = transaction['vote_number']
         if len(chain) < vote_number:
             return False
-        referenced_voter = chain[vote_number]['transactions']['sender']
+        target_node_transactions = chain[vote_number]['transactions']
+        if len(target_node_transactions) != 1:
+            # The initial vote nodes only have one transaction per block.
+            return False
+        referenced_voter = target_node_transactions[0]['recipient']
         if sender != referenced_voter:
             return False
 
+        log("SENDER. MATCHES VOTE OWNER. CHECKING KEY.")
         # We now know that someone is trying to cast a vote that is indeed available
         # to be cast. Now we need to verify the signature that the voter provided in
         # order to ascertain that the transaction is actually valid. The signature is
         # the phrase "NO COLLUSION" encrypted with a private RSA key that corresponds
         # to the public key in the 'sender' field.
         signature = transaction['signature']
+        log(signature, type(signature))
+        # signature = str.encode(signature)
+        # log(signature, type(signature))
+        # signature = cryptfuncs.convert_string_to_key(signature)
         verification_message = "NO COLLUSION"
-        verification = cryptfuncs.verify(verification_message, signature, cryptfuncs.convert_string_to_key(sender))
+        voter_public_key = cryptfuncs.convert_string_to_key(sender)
+        verification = cryptfuncs.verify(verification_message, signature, voter_public_key)
+        log("{}".format("Verification success" if verification else "Verification failed"))
         return verification
 
     def get_transactor(self, vote_number):
@@ -273,9 +285,14 @@ class Blockchain:
         :vote_number: The number corresponding to the vote being cast.
         :return: The public key of the person voting now. False if failed.
         """
-        if len(self.chain) < vote_number or vote_number == -1:
+        log(vote_number, type(vote_number))
+        if len(self.chain) < vote_number:
             return False
-        return self.chain[vote_number]['transactions']['recipient']
+        target_node_transactions = self.chain[vote_number]['transactions']
+        if len(target_node_transactions) != 1:
+            # The initial vote nodes only have one transaction per block.
+            return False
+        return target_node_transactions[0]['recipient']
 
     @staticmethod
     def non_redundant_transaction(transaction, chain):
@@ -288,7 +305,7 @@ class Blockchain:
         transaction_time = transaction['timestamp']
         sender = transaction['sender']
         recipient = transaction['recipient']
-        log("CHECKING TRANSACTION WITH THESE PROPERTIES:")
+        log("CHECKING FOR REDUNDANT TRANSACTION WITH THESE PROPERTIES:")
         log("SENDER: {} RECIPIENT: {} TIME: {}".format(sender, recipient, transaction_time))
         transaction_seen = False
         for block in chain:
@@ -368,16 +385,16 @@ class Blockchain:
         :param vote_number: The vote block corresponding with the signature.
         :return: The index of the block that will hold this transaction.
         """
-        self.current_transactions.append({
+        new_t = {
             'sender': sender,
             'recipient': recipient,
             'timestamp': time(),
             'amount': amount,
             'signature': signature,
             'vote_number': vote_number
-        })
-        # Return the index of the next block (which this transaction will be appended to) for output purposes.
-        return self.last_block['index'] + 1
+        }
+        self.current_transactions.append(new_t)
+        return new_t
 
     @property
     def last_block(self):

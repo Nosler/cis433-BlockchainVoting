@@ -75,7 +75,6 @@ def mine_votes(votes_per_participant):
     else:
         relative_path = "secret_keys/key_{}.vote".format(i+1)
 
-
     final_path = path.join(script_path, relative_path)
     with open(final_path, 'wb') as f:
         f.write(signature)
