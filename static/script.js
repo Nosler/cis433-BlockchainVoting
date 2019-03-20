@@ -79,7 +79,7 @@ function submitVote(){
   var VOTE_URL = window.location.href + "vote";
 
   var r = new FileReader();
-  r.readAsText(document.getElementById("vote-key-file").files[0], "UTF-8");
+  r.readAsBinaryString(document.getElementById("vote-key-file").files[0]);
   r.onload = function(){
       $.post("vote/", {id: id, key: r.result, candidate: candidateNames[voteID]},
        function(data, status){
