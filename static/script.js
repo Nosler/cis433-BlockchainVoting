@@ -63,7 +63,6 @@ function submitVote(){
   console.log("Key: ", key);
   console.log("Candidate: ", candidateNames[voteID]);
   var VOTE_URL = window.location.href + "vote";
-
   var r = new FileReader();
   r.readAsText(document.getElementById("vote-key-file").files[0], "UTF-8");
   r.onload = function(){
@@ -79,6 +78,6 @@ function redirect(data){
     if(data.status == "success"){
         window.location.assign(window.location.href + "results/");
     } else {
-        alert("Vote invalid!");
+        alert("Vote invalid. Either the listed ID / Key is not correct, or you've already voted.");
     }
 }
