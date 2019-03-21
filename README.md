@@ -23,7 +23,7 @@ Then instal project dependencies with:
 pipenv install
 ```
 This project also uses ngrok to give your server a public URL.
-Get it at: https://ngrok.com/ and place your ngrok file in the project root directory.
+Get it at: https://ngrok.com/. Instructions for download and setup of ngrok are available on the ngrok site. Once it is set up, place your ngrok file in the project root directory.
 
 ## Usage
 #### How to actually hold a vote using this system:
