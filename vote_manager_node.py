@@ -42,13 +42,22 @@ def full_chain():
     return jsonify(response), 200
 
 
-@app.route('/resolve/', methods=['GET'])
-def consensus():
+@app.route('/nodes/', methods=['GET'])
+def send_node_list():
     """
-    Call function to resolve conflicts between this node and other nodes.
+    App route to call to return a list of all nodes this node is connected to.
     """
-    replaced = blockchain.resolve_conflicts()
+    response = {'nodes': list(blockchain.nodes)}
+    return jsonify(response), 200
 
+
+@app.route('/get_results/', methods=['GET'])
+def fetch_results():
+    """
+    If a user is checking the results of the vote, pull the latest chain,
+    resolve conflicts, and then display the wallet balances of all the candidates.
+    """
+    blockchain.resolve_conflicts()
     # If, at some point in the past, there was a parallel operation that resulted in the node failing to respond
     # to another node's request, this node may have been incorrectly pruned from that node's list of active nodes.
     # To correct this, send a reciprocation request to all nodes that just responded by sending this node a chain.
@@ -60,32 +69,23 @@ def consensus():
         except:
             continue
 
-    if replaced:
-        response = {
-            'message': 'Our chain was replaced',
-            'new_chain': blockchain.chain
-        }
-    else:
-        response = {
-            'message': 'Our chain is authoritative',
-            'chain': blockchain.chain
-        }
-    return jsonify(response), 200
+    # Now that we have the most up to date chain, fetch the candidates' wallet balances.
+    with open("vote_params.txt", 'r') as f:
+        vote_params = f.read()
+    candidates = vote_params.split("Candidates:")[1].split('\n')
+    candidates = list(filter(lambda x: x != "", candidates))
 
-
-@app.route('/nodes/', methods=['GET'])
-def send_node_list():
-    """
-    App route to call to return a list of all nodes this node is connected to.
-    """
-    response = {'nodes': list(blockchain.nodes)}
-    return jsonify(response), 200
+    data = dict()
+    for candidate in candidates:
+        data[candidate] = blockchain.balance_check(candidate)
+    return jsonify(data), 200
 
 
 @app.route('/results/', methods=['GET'])
-def send_results():
-    # TODO: THIS PAGE CAUSES RESOLVE.
-    # TODO: GET THE BALANCE OF EACH CANDIDATE FROM THE CURRENT CHAIN.
+def display_results():
+    """
+    App route for the results page.
+    """
     return render_template('results.html')
 
 

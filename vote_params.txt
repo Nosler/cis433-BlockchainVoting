@@ -1,7 +1,7 @@
 # Future goal is to have the html and server stuff generated from this file.
 
 Vote Question:
-What even <i>is</i> blue? - Results
+What even <i>is</i> blue?
 
 Candidates:
 A feeling
