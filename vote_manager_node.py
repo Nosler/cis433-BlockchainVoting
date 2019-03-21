@@ -1,6 +1,6 @@
 # Authors: Sam Champer, Andi Nosler
-# Partially uses some code from Daniel van Flymen (https://github.com/dvf/blockchain)
-# along with additional code by the authors to implement the specific needs of a blockchain enabled election.
+# Partially uses some starter code from Daniel van Flymen (https://github.com/dvf/blockchain)
+# along with lots of additional code by the authors to implement the specific needs of a blockchain enabled election.
 
 from uuid import uuid4
 from flask import Flask, jsonify, request, render_template
@@ -11,6 +11,7 @@ from time import sleep
 from werkzeug.contrib.fixers import ProxyFix
 from urllib.parse import urlparse
 import atexit
+from simplelog import *
 
 
 # Instantiate the blockchain node in flask:
@@ -30,6 +31,7 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/chain', methods=['GET'])
 @app.route('/chain/', methods=['GET'])
 def full_chain():
     """
@@ -68,6 +70,13 @@ def fetch_results():
             requests.post("http://" + node + "/recip", json={'port': port})
         except:
             continue
+    # This node may have had the most up to date chain, yet still have pending transactions.
+    # if so, mine a block into which any pending transactions can be added.
+    if blockchain.current_transactions:
+        last_block = blockchain.last_block
+        proof = blockchain.proof_of_work(last_block)
+        previous_hash = blockchain.hash(last_block)
+        blockchain.new_block(proof, previous_hash)
 
     # Now that we have the most up to date chain, fetch the candidates' wallet balances.
     with open("vote_params.txt", 'r') as f:
@@ -95,9 +104,6 @@ def submit_vote():
     vote_number = int(request.form["id"])
     signature = request.form["key"]
     recipient = request.form["candidate"]
-    print("ID: ", vote_number)
-    print("Key: " + signature)
-    print("Candidate: " + recipient)
     sender = blockchain.get_transactor(vote_number)
     if not sender:
         return jsonify({"status": "fail"})
@@ -132,15 +138,68 @@ def submit_vote():
     if vote not in block['transactions']:
         return jsonify({"status": "fail"})
     # Transaction successfully added to new block. Broadcast the new transaction to other nodes.
-    # TODO: BROADCAST TO OTHER NODES. IMPLEMENT BROADCAST_VOTE FUNC. IMPLEMENT RCV VOTE APP ROUTE FUNC.///////////////////////////////
+    broadcast_transaction(vote)
     # HTML will now redirect to page for checking vote.
     return jsonify({"status": "success"})
 
 
+def broadcast_transaction(transaction):
+    """
+    Broadcast a valid transaction that ths node received to
+    every node that this one is linked to.
+    :param transaction: a vote transaction
+    """
+    if len(blockchain.nodes):
+        print("   BROADCASTING TRANSACTION TO CONNECTED NODES.")
+        for node in blockchain.nodes:
+            try:
+                attempts = 0
+                while attempts < 2:
+                    response = requests.post("http://" + node + "/external_transaction/",
+                                             json={'sender': transaction['sender'],
+                                                   'recipient': transaction['recipient'],
+                                                   'amount': transaction['amount'],
+                                                   'signature': transaction['signature'],
+                                                   'vote_number': transaction['vote_number']
+                                                   })
+                    attempts += 1
+                    if response:
+                        break
+                    else:
+                        sleep(1)
+            except:
+                continue
+
+
+@app.route('/external_transaction/', methods=['post'])
+def external_transaction():
+    """
+    Add a transaction from an external source to the list of
+    pending transactions for the next block. Don't actually bother
+    checking the transaction: it will be checked next time a new block
+    is formed, which will occur when/if another vote is cast on this server.
+    """
+    values = request.get_json(force=True)
+    sender = values['sender']
+    recipient = values['recipient']
+    amount = int(values['amount'])
+    signature = values['signature']
+    vote_number = int(values['vote_number'])
+    vote = blockchain.new_transaction(
+        sender=sender,
+        recipient=recipient,
+        amount=amount,
+        signature=signature,
+        vote_number=vote_number
+    )
+    return jsonify(vote), 200
+
+
 @app.route('/recip/', methods=['post'])
+@app.route('/recip', methods=['post'])
 def reciprocate_acknowledgement():
     """
-    App route to call to return a list of all nodes this node is connected to.
+    App route to return a request this node to reciprocate acknowledgement of a remote node..
     """
     values = request.get_json(force=True)
     blockchain.register_node(request.remote_addr + ":" + str(values['port']))
@@ -267,7 +326,10 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', default=5000, type=int, help='port to listen on')
     parser.add_argument('-src', '--source', default="http://127.0.0.1:4999/", type=str,
                         help='port to listen on')
+    parser.add_argument('-log', '--logging', default=False, type=bool, help='Output more verbose logging statements.')
     args = parser.parse_args()
+    if args.logging:
+        init_logger()
     port = args.port
     source = args.source
     initialize(source)

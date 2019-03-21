@@ -28,10 +28,10 @@ pipenv install
 * 1: After installing, setup a node to mine as many votes as you'll need, 
 and build the initial blockchain. Do this by running ``init``. This has optional arguments:<br>
 ``-p`` to specify a port (default 4999) <br>``-n`` to specify number of votes (default 10)<br>
-``-vpp`` to specify the number of votes per person (default 1) <br> For example, to start an
-election with 20 people, run the startup server on port 7777, and have one votes per person, run the following command:
+For example, to start an election with 20 people, run the startup server on port 7777,
+and have one votes per person, run the following command:
 ```
-pipenv run init -p 7777 -n 20 -vpp 1
+pipenv run init -p 7777 -n 20
 ```
 * 2: After the miner has finished generating the keys and mining the votes, a standard vote manager node can 
 be started and import the chain from the miner. To do so, *while the miner is still running,* use a separate terminal 

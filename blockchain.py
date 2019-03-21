@@ -1,5 +1,5 @@
 # Authors: Sam Champer, Andi Nosler
-# Adapted, modified, and extended from code by Daniel van Flymen: https://github.com/dvf/blockchain
+# Using some starter code from Daniel van Flymen: https://github.com/dvf/blockchain
 
 import hashlib
 import json
@@ -7,13 +7,7 @@ from time import time
 from urllib.parse import urlparse
 import requests
 import cryptfuncs
-
-
-def log(*args, **kwargs):
-    logging = True
-    if logging:
-        print("LOG:: ", end="")
-        print(*args, **kwargs)
+from simplelog import log
 
 
 class Blockchain:
@@ -113,14 +107,10 @@ class Blockchain:
             if owner != "0" and new_wallet[owner] < 0:
                 # Prevent tranferer from spending more than they have.
                 return False, dict(), 0
-            print("Owner: {} has net value: {}".format(owner, new_wallet[owner]))
         if self.lock and new_chain_value != self.total_value:
             # If the chain is locked, return false if the chain
             # under consideration has a higher net value.
             return False, dict(), 0
-        print("NEW CHAIN VALUE: ", new_chain_value)
-        print(self.lock)
-        print(self.total_value)
         self.wallets = new_wallet
         self.total_value = new_chain_value
         return True, new_wallet, new_chain_value
@@ -163,7 +153,7 @@ class Blockchain:
         Resolves conflicts by replacing our chain with the longest one in the network.
         :return: True if chain was replaced, False if not.
         """
-        log("RESOLVING CONFCLICTS: ")
+        log("RESOLVING CONFCLICTS.")
         neighbours = list(self.nodes)
         new_chain = None
         new_wallets = self.wallets
@@ -187,11 +177,10 @@ class Blockchain:
                 if response.status_code == 200:
                     length = response.json()['length']
                     chain = response.json()['chain']
-                    log("COMPARING CHAIN WITH LENGTH {}.".format(length))
                     # Check if the length is longer and the chain is valid
-                    log("VERIFYING CHAIN IS VALID.")
+                    log("CHECKING CHAIN.")
                     if length > max_length and self.valid_chain(chain):
-                        log("CHAIN IS VALID. CHECKING THAT TRANSACTIONS RESULT IN POSITIVE BALANCES.")
+                        log("CHAIN IS VALID. CHECKING BALANCES.")
                         valid_wallets, new_wallets, new_chain_value = self.valid_wallets(chain)
                         # If all blocks have correct hashes, and all blocks have valid
                         # transactions, and the new chain leads to valid wallets.
@@ -200,10 +189,12 @@ class Blockchain:
                             new_chain = chain
         # Replace this node's chain if a new, valid, longer chain is discovered:
         if new_chain:
+            log("REPLACING THIS NODE'S CHAIN WITH NEW ONE.")
             self.chain = new_chain
             self.wallets = new_wallets
             self.total_value = new_chain_value
             return True
+        log("KEEPING CURRENT CHAIN.")
         return False
 
     def chain_transactions_valid(self, chain):
@@ -214,8 +205,8 @@ class Blockchain:
         :param chain: The chain to be checked.
         :return: True if valid, else false
         """
+        log("CHECKING VALIDITY OF TRANSACTIONS.")
         for block in chain:
-            log("CHECKING BLOCK FOR VALID VALID TRANSACTIONS.")
             for transaction in block['transactions']:
                 if not self.valid_transaction(transaction, chain):
                     return False
@@ -229,21 +220,17 @@ class Blockchain:
         :return: True if valid, else false
         """
         # Ensure that transaction is not redundant:
-        log("CHECKING THAT TRANSACTION IS NOT A DUPLICATE.")
         if not self.non_redundant_transaction(transaction, chain):
             return False
         # Ensure transfer amount is positive.
-        log("CHECKING THAT TRANSACTION IS POSITIVE.")
         amount = transaction['amount']
         if amount < 0:
             return False
         sender = transaction['sender']
         if sender == "0":
             # Original vote producer node.
-            log("ORIGINAL MINER TRANSACTIONS ARE CHECKED LATER.")
             return True
 
-        log("CHECKING THAT TRANSFER IS VALID.")
         # If not an original vote producer vote, then the vote is being
         # transferred, e.g. being cast.
         # Ensure that the vote number is the correct one for this vote:
@@ -258,7 +245,6 @@ class Blockchain:
         if sender != referenced_voter:
             return False
 
-        log("SENDER. MATCHES VOTE OWNER. CHECKING KEY.")
         # We now know that someone is trying to cast a vote that is indeed available
         # to be cast. Now we need to verify the signature that the voter provided in
         # order to ascertain that the transaction is actually valid. The signature is
@@ -274,7 +260,9 @@ class Blockchain:
         verification_message = "NO COLLUSION"
         signature = cryptfuncs.sign(verification_message, voter_private_key)
         verification = cryptfuncs.verify(verification_message, signature, voter_public_key)
-        log("{}".format("VERIFICATION SUCCESS." if verification else "VERIFICATION FAILED."))
+        log("{} TRANSACTION".format("GOOD" if verification else "BAD"))
+        if not verification:
+            log("THE FOLLOWING TRANSACTION WAS NOT VALID: {}".format(transaction))
         return verification
 
     def get_transactor(self, vote_number):
@@ -287,7 +275,6 @@ class Blockchain:
         :vote_number: The number corresponding to the vote being cast.
         :return: The public key of the person voting now. False if failed.
         """
-        log(vote_number, type(vote_number))
         if len(self.chain) < vote_number:
             return False
         target_node_transactions = self.chain[vote_number]['transactions']
@@ -307,8 +294,6 @@ class Blockchain:
         transaction_time = transaction['timestamp']
         sender = transaction['sender']
         recipient = transaction['recipient']
-        log("CHECKING FOR REDUNDANT TRANSACTION WITH THESE PROPERTIES:")
-        log("SENDER: {} RECIPIENT: {} TIME: {}".format(sender, recipient, transaction_time))
         transaction_seen = False
         for block in chain:
             if block['transactions']:
@@ -332,15 +317,14 @@ class Blockchain:
         :param transaction: A transaction with a sender, reciever, and amount.
         :return: True if balance is sufficient, else false.
         """
+        log("CHECKING BALANCE.")
         amount = transaction['amount']
         sender = transaction['sender']
         if sender == "0" and not self.lock:
             # "0" sender, is the original source, and is allowed
-            log("CHAIN NOT LOCKED, NEW VOTE GENERATION PERMITTED.")
             return True
         if sender in self.wallets:
             log("SENDER FOUND IN WALLET.")
-            log("CHECKING SENDER BALANCE.")
             if self.wallets[sender] >= amount:
                 log("BALANCE SUFFICIENT.")
                 return True

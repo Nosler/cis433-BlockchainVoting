@@ -11,6 +11,7 @@ from argparse import ArgumentParser
 from blockchain import Blockchain
 from cryptfuncs import *
 from sys import platform
+from simplelog import *
 
 # Instantiate the app in flask:
 app = Flask(__name__)
@@ -79,12 +80,13 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', default=4999, type=int, help='port to listen on')
     parser.add_argument('-n', '--numvotes', default=10, type=int,
                         help='The number of votes generated for use in the election.')
-    parser.add_argument('-vpp', '--votes_per_person', default=1, type=int,
-                        help='For elections where individuals can cast multiple votes.')
+    # parser.add_argument('-vpp', '--votes_per_person', default=1, type=int,
+    #                     help='For elections where individuals can cast multiple votes.')
     args = parser.parse_args()
     port = args.port
     num_votes = args.numvotes
-    votes_per_person = args.votes_per_person
+    # votes_per_person = args.votes_per_person  # Might implement this at some future date.
+    votes_per_person = 1
     print()
     for i in range(num_votes):
         print("   Generating unique key pair for voter number: {}".format(i + 1))
