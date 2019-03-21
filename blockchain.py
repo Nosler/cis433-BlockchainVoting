@@ -264,15 +264,17 @@ class Blockchain:
         # order to ascertain that the transaction is actually valid. The signature is
         # the phrase "NO COLLUSION" encrypted with a private RSA key that corresponds
         # to the public key in the 'sender' field.
-        signature = transaction['signature']
-        log(signature, type(signature))
-        # signature = str.encode(signature)
-        # log(signature, type(signature))
-        # signature = cryptfuncs.convert_string_to_key(signature)
+        voter_private_key = cryptfuncs.import_key(transaction['signature'])
+        # A voters signature is the private key that is assigned to their vote.
+        # Once used, it is no longer usable. Thus, it doesn't matter that users
+        # are publicizing their private key, something one wouldn't want to do
+        # in most contexts.
+        voter_public_key = cryptfuncs.import_key(sender)
+
         verification_message = "NO COLLUSION"
-        voter_public_key = cryptfuncs.convert_string_to_key(sender)
+        signature = cryptfuncs.sign(verification_message, voter_private_key)
         verification = cryptfuncs.verify(verification_message, signature, voter_public_key)
-        log("{}".format("Verification success" if verification else "Verification failed"))
+        log("{}".format("VERIFICATION SUCCESS." if verification else "VERIFICATION FAILED."))
         return verification
 
     def get_transactor(self, vote_number):
@@ -337,8 +339,9 @@ class Blockchain:
             log("CHAIN NOT LOCKED, NEW VOTE GENERATION PERMITTED.")
             return True
         if sender in self.wallets:
+            log("SENDER FOUND IN WALLET.")
             log("CHECKING SENDER BALANCE.")
-            if self.wallets[sender] > amount:
+            if self.wallets[sender] >= amount:
                 log("BALANCE SUFFICIENT.")
                 return True
         log("{} DOES NOT HAVE A SUFFICIENT BALANCE OR DOES NOT EXIST.".format(sender))

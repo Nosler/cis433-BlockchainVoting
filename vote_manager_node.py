@@ -95,7 +95,7 @@ def submit_vote():
     vote_number = int(request.form["id"])
     signature = request.form["key"]
     recipient = request.form["candidate"]
-    print("ID: ", vote_number, type(vote_number))
+    print("ID: ", vote_number)
     print("Key: " + signature)
     print("Candidate: " + recipient)
     sender = blockchain.get_transactor(vote_number)

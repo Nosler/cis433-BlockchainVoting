@@ -1,0 +1,11 @@
+# Future goal is to have the html and server stuff generated from this file.
+
+Vote Question:
+What even <i>is</i> blue? - Results
+
+Candidates:
+A feeling
+More than a feeling
+A color
+Y'know, just, life
+Eiffel 65

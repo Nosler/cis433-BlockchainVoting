@@ -20,23 +20,14 @@ def new_rsa(keysize):
     return public, private
 
 
-def import_key(filename):
-    """
-    Import a key from external source (like a text file).
-    :param filename: A file with a RSA private key.
-    :return: A key that can be used.
-    """
-    f = open(filename, 'r')
-    return RSA.importKey(f.read())
-
-
-def convert_string_to_key(key_string):
+def import_key(key_string):
     """
     Convert a string of a key to a RSAKey object.
     :param key_string: a string version of a key.
     :return: An RsaKey object.
     """
-    return RSA.importKey(str.encode(key_string))
+    return RSA.importKey(key_string.encode())
+
 
 def get_public_key(priv_key):
     """

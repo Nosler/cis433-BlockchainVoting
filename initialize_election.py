@@ -50,10 +50,6 @@ def mine_votes(votes_per_participant):
     """
     public, private = new_rsa(1024)
 
-    # Run the proof of work algorithm to get the next proof:
-    last_block = blockchain.last_block
-    proof = blockchain.proof_of_work(last_block)
-
     # Associate the vote with the public key of the voter.
     # The sender is "0" to signify that this is a newly mined coin, not a transfer.
     blockchain.new_transaction(
@@ -61,23 +57,21 @@ def mine_votes(votes_per_participant):
         recipient=public.export_key().decode(),
         amount=votes_per_participant
     )
+    # Run the proof of work algorithm to get the next proof:
+    last_block = blockchain.last_block
+    proof = blockchain.proof_of_work(last_block)
     # Adding the new block to the chain:
     previous_hash = blockchain.hash(last_block)
     blockchain.new_block(proof, previous_hash)
 
-    verification_message = "NO COLLUSION"
-    signature = sign(verification_message, private)
-
     script_path = path.dirname(path.abspath(__file__))
-
     if platform == "win32":
         relative_path = "secret_keys\\key_{}.vote".format(i+1)
     else:
         relative_path = "secret_keys/key_{}.vote".format(i+1)
-
     final_path = path.join(script_path, relative_path)
-    with open(final_path, 'wb') as f:
-        f.write(signature)
+    with open(final_path, 'w') as f:
+        f.write(private.export_key().decode())
 
 
 if __name__ == '__main__':
