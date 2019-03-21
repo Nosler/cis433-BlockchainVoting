@@ -28,14 +28,16 @@ blockchain = Blockchain()
 @app.route('/index')
 @app.route('/index.html')
 def index():
+    """
+    Render the index page.
+    """
     return render_template('index.html')
 
 
-@app.route('/chain', methods=['GET'])
 @app.route('/chain/', methods=['GET'])
 def full_chain():
     """
-    App route to call for a display of the entire chain.
+    App route to call for sending the chain.
     """
     response = {
         'chain': blockchain.chain,
@@ -67,11 +69,11 @@ def fetch_results():
     # but it makes the system a tiny bit more robust:
     for node in blockchain.nodes:
         try:
-            requests.post("http://" + node + "/recip", json={'port': port})
+            requests.post("http://" + node + "/recip/", json={'port': port})
         except:
             continue
     # This node may have had the most up to date chain, yet still have pending transactions.
-    # if so, mine a block into which any pending transactions can be added.
+    # if so, add a block into which any pending transactions can be added.
     if blockchain.current_transactions:
         last_block = blockchain.last_block
         proof = blockchain.proof_of_work(last_block)
@@ -98,14 +100,18 @@ def display_results():
     return render_template('results.html')
 
 
-@app.route('/vote', methods=['post'])
 @app.route('/vote/', methods=['post'])
 def submit_vote():
+    """
+    Receive a post from the HTML with the information for
+    a new vote transaction.
+    """
     vote_number = int(request.form["id"])
     signature = request.form["key"]
     recipient = request.form["candidate"]
     sender = blockchain.get_transactor(vote_number)
     if not sender:
+        # Failure if user trying to cast non-existent vote.
         return jsonify({"status": "fail"})
 
     vote = blockchain.new_transaction(
@@ -150,7 +156,7 @@ def broadcast_transaction(transaction):
     :param transaction: a vote transaction
     """
     if len(blockchain.nodes):
-        print("   BROADCASTING TRANSACTION TO CONNECTED NODES.")
+        log("BROADCASTING TRANSACTION TO CONNECTED NODES.")
         for node in blockchain.nodes:
             try:
                 attempts = 0
@@ -177,8 +183,10 @@ def external_transaction():
     Add a transaction from an external source to the list of
     pending transactions for the next block. Don't actually bother
     checking the transaction: it will be checked next time a new block
-    is formed, which will occur when/if another vote is cast on this server.
+    is formed, which will occur when/if another vote is cast on this server,
+    or when someone checks the results of the vote on this server.
     """
+    log("RECEIVED TRANSACTION FROM EXTERNAL SOURCE.")
     values = request.get_json(force=True)
     sender = values['sender']
     recipient = values['recipient']
@@ -196,12 +204,12 @@ def external_transaction():
 
 
 @app.route('/recip/', methods=['post'])
-@app.route('/recip', methods=['post'])
 def reciprocate_acknowledgement():
     """
-    App route to return a request this node to reciprocate acknowledgement of a remote node..
+    Route that requests that this node reciprocate acknowledgement of a remote node.
     """
     values = request.get_json(force=True)
+    log("RECEIVED RECIPROCATION REQUEST FROM {}".format(request.remote_addr + ":" + str(values['port'])))
     blockchain.register_node(request.remote_addr + ":" + str(values['port']))
     response = {
         'message': 'New node added',
@@ -213,9 +221,10 @@ def reciprocate_acknowledgement():
 @app.route('/remove/', methods=['post'])
 def remove_node():
     """
-    App route to call to remove a node that is terminating itself.
+    App route for a terminating node to call in order to remove itself from other nodes.
     """
     values = request.get_json(force=True)
+    log("RECEIVED REQUEST TO REMOVE NODE: {}".format(request.remote_addr + ":" + str(values['port'])))
     blockchain.remove_node(request.remote_addr + ":" + str(values['port']))
     response = {
         'message': 'Node removed',
@@ -226,7 +235,8 @@ def remove_node():
 
 def initialize(chain_source):
     """
-    Link to a specified manager or miner node and import a blockchain from that node.
+    Link up to an election node or a new election miner node
+    and import a blockchain from that node.
     """
     if chain_source[-1] != '/':
         chain_source += '/'
@@ -264,7 +274,7 @@ def initialize(chain_source):
         # List of nodes connected to our target source.
         connected_nodes = response.json()['nodes']
         # Ask for recip with target source:
-        response = requests.post("http://" + chain_source + "/recip", json={'port': port})
+        response = requests.post("http://" + chain_source + "/recip/", json={'port': port})
         if len(connected_nodes):
             print("   Registering nodes connected to target node and requesting reciprocation.")
             for node in connected_nodes:
@@ -282,7 +292,6 @@ def initialize(chain_source):
     initialize_from_source = blockchain.resolve_conflicts()
     # A key feature of using blockchains in an election is that votes cannot be 'mined' after the
     # initial blockchain is set up, though transactions can still be added to blocks with zero value.
-
     blockchain.value_lock()
     if initialize_from_source:
         print("\n  ***Local blockchain has been initialized to match the specified source!***\n")
@@ -300,15 +309,16 @@ def exit_func():
     print("\n   Shutting down node...")
     for node in blockchain.nodes:
         # Have one of the other nodes resolve the chain, so that if this node has the longest chain,
-        # the chain is sent off to a node that is not exiting.
+        # the chain is sent over to a node that is not exiting. This is not strictly necessary,
+        # since transactions are shared between nodes as come in, but this should still help keep things clean.
         try:
             response = requests.get("http://" + node + "/resolve/")
             if response:
                 break
         except:
             continue
-    # Tell other nodes to remove this node from their lists of nodes. Not strictly necessary, just less time wasted
-    # pinging this address later.
+    # Tell other nodes to remove this node from their lists of nodes.
+    # Not strictly necessary, just less time wasted pinging this address later.
     for node in blockchain.nodes:
         try:
             requests.post("http://" + node + "/remove/", json={'port': port})
@@ -326,9 +336,11 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--port', default=5000, type=int, help='port to listen on')
     parser.add_argument('-src', '--source', default="http://127.0.0.1:4999/", type=str,
                         help='port to listen on')
-    parser.add_argument('-log', '--logging', default=False, type=bool, help='Output more verbose logging statements.')
+    parser.add_argument('-log', '--logging', dest='log_output', action='store_true',
+                        help=' Add -log to output more verbose logging statements.')
+    parser.set_defaults(log_output=False)
     args = parser.parse_args()
-    if args.logging:
+    if args.log_output:
         init_logger()
     port = args.port
     source = args.source

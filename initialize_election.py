@@ -11,7 +11,6 @@ from argparse import ArgumentParser
 from blockchain import Blockchain
 from cryptfuncs import *
 from sys import platform
-from simplelog import *
 
 # Instantiate the app in flask:
 app = Flask(__name__)
