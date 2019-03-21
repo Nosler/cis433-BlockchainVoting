@@ -21,8 +21,8 @@ Then install project dependencies with:
 ```
 pipenv install
 ```
-This project can optionally expose a locally hosted node to broader
-internet accessibility. If you want to run the project in this way,
+This project can optionally expose a locally hosted node by giving it a public URL.
+If you want to run the project in this way,
 one of the best tools to do so is ngrok.
 Get it at: https://ngrok.com/. For maximum convenience, place ngrok in
 the project root directory.
