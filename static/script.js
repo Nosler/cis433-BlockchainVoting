@@ -42,25 +42,11 @@ function clearCandidate(){
   }
 }
 
-function op1(){
-   document.getElementById("Op1").classList.add("active");
-}
-
-function op2(){
-  document.getElementById("Op2").classList.add("active");
-}
-
-function op3(){
-  document.getElementById("Op3").classList.add("active");
-}
-
-function op4(){
-  document.getElementById("Op4").classList.add("active");
-}
-
-function op5(){
-  document.getElementById("Op5").classList.add("active");
-}
+function op1(){document.getElementById("Op1").classList.add("active");}
+function op2(){document.getElementById("Op2").classList.add("active");}
+function op3(){document.getElementById("Op3").classList.add("active");}
+function op4(){document.getElementById("Op4").classList.add("active");}
+function op5(){document.getElementById("Op5").classList.add("active");}
 
 function submitVote(){
   var id = document.getElementById("voting-id").value;
