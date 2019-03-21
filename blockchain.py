@@ -165,7 +165,7 @@ class Blockchain:
             response = None
             for i in range(5):
                 try:
-                    response = requests.get(f'http://{node}/chain')
+                    response = requests.get(f'http://{node}/chain/')
                     if response:
                         break
                 except:

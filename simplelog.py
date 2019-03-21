@@ -3,11 +3,13 @@
 
 logging = False
 
+
 def init_logger():
     global logging
     logging = True
 
+
 def log(*args, **kwargs):
     if logging:
-        print("LOG::", end="")
+        print("   LOG::", end="")
         print(*args, **kwargs)
