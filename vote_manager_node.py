@@ -51,7 +51,7 @@ def send_node_list():
     return jsonify(response), 200
 
 
-@app.route('/get_results/', methods=['GET'])
+@app.route('/results/get_results/', methods=['GET'])
 def fetch_results():
     """
     If a user is checking the results of the vote, pull the latest chain,

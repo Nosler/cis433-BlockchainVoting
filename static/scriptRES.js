@@ -5,7 +5,9 @@ window.onload=function(){
 }
 
 function count_votes(dict){
-    var vote_counts = [dict.candidate1, dict.candidate2, dict.candidate3, dict.candidate4, dict.candidate5];
+    console.log(dict);
+    console.log(dict.candidate);
+    var vote_counts = [dict["A feeling"], dict["More than a feeling"], dict["A color"], dict["Y'know, just, life"], dict["Eiffel 65"]];
     var winners = [false, false, false, false, false];
     var badges = document.getElementsByClassName("badge");
     var i;
