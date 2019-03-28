@@ -1,7 +1,3 @@
-# cis433-BlockchainVoting
-Final Project for CIS 433
-
-
 ## Authors
 
 Sam champer <br/> Andrea Nosler
